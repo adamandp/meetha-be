@@ -165,10 +165,16 @@ const restartImport = async (req, res) => {
   req
     .pool()
     .query(
-      "update event set uploading = $1, loading = $2 where id = $3 ",
-      [0, 0, req.body.id],
-      function (err) {
+      "update event set uploading = $1, loading = $2, import_status = $3, import_message = NULL where id = $4 AND uploading <> 2",
+      [0, 0, 0, req.body.id],
+      function (err, result) {
         if (!err) {
+          if (!result?.rowCount)
+            return res.send({
+              success: false,
+              message: "Import not found or already finished",
+            });
+          req.core.cancelEventUploadWithEventId(req.body.id);
           res.send({ success: true, message: "Success Update Event" });
         } else {
           res.send({ success: false, message: err.message });

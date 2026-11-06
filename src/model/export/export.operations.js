@@ -43,7 +43,7 @@ const exportEventTranscripts = async function (req, res) {
         req
           .pool()
           .query(
-            "SELECT * FROM event_transcript where event_id = $1 order by seq, start, id asc",
+            "SELECT * FROM event_transcript where event_id = $1 order by start, id asc",
             [req.query.eventId],
             async function (err, qres) {
               if (qres && qres.rows && qres.rows.length > 0) {
@@ -179,7 +179,7 @@ const exportVideoTranscripts = async function (req, res) {
           req
             .pool()
             .query(
-              "SELECT * FROM event_transcript where event_id = $1 order by seq, start, id asc",
+              "SELECT * FROM event_transcript where event_id = $1 order by start, id asc",
               [req.query.eventId],
               async function (err, qres) {
                 if (qres && qres.rows && qres.rows.length > 0) {

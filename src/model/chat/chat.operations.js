@@ -81,12 +81,10 @@ const uploadfiletobot = async function (req, res) {
                     data: response.data.uuid,
                   });
                 } else {
-                  res
-                    .status(401)
-                    .send({
-                      success: false,
-                      message: "Failed to connect with chatbot",
-                    });
+                  res.status(401).send({
+                    success: false,
+                    message: "Failed to connect with chatbot",
+                  });
                 }
               })
               .catch((error) => {
@@ -124,11 +122,9 @@ const generateEventSummary = async function (req, res) {
     return;
   } else {
     let trText = "";
-    let q =
-      "SELECT * FROM event_transcript where event_id = " +
-      req.body.event_id +
-      " order by seq, start, id";
-    req.pool().query(q, function (failed, qres) {
+    const q =
+      "SELECT * FROM event_transcript WHERE event_id = $1 ORDER BY start, id";
+    req.pool().query(q, [req.body.event_id], function (failed, qres) {
       if (failed) {
         res.send({ success: false, message: failed.message });
         return;
@@ -312,12 +308,10 @@ const generateArticle = async function (req, res) {
                     .status(401)
                     .send({ success: false, message: response.data.message });
                 } else {
-                  res
-                    .status(401)
-                    .send({
-                      success: false,
-                      message: "Failed to connect with article engine",
-                    });
+                  res.status(401).send({
+                    success: false,
+                    message: "Failed to connect with article engine",
+                  });
                 }
               })
               .catch((error) => {
@@ -384,12 +378,10 @@ const getGeneratedArticle = async function (req, res) {
             .status(401)
             .send({ success: false, message: response.data.message });
         } else {
-          res
-            .status(401)
-            .send({
-              success: false,
-              message: "Failed to connect with article engine",
-            });
+          res.status(401).send({
+            success: false,
+            message: "Failed to connect with article engine",
+          });
         }
       })
       .catch((error) => {

@@ -53,7 +53,7 @@ const handler = (check) => async (req, res) => {
         .status(409)
         .json({ message: "Pemeriksaan event ini sedang berlangsung." });
     const transcripts = await client.query(
-      "SELECT attendance, start, transcript FROM event_transcript WHERE event_id = $1 ORDER BY seq, start, id",
+      "SELECT attendance, start, transcript FROM event_transcript WHERE event_id = $1 ORDER BY start, id",
       [eventId],
     );
     const entries = transcripts.rows.map((row) => ({
@@ -98,19 +98,15 @@ const handler = (check) => async (req, res) => {
         .status(404)
         .json({ code: "NOT_CHECKED", message: "Belum diperiksa." });
     if (check && status === 404)
-      return res
-        .status(422)
-        .json({
-          message:
-            "File transkrip tidak ditemukan oleh AI. Periksa mount folder summary.",
-        });
+      return res.status(422).json({
+        message:
+          "File transkrip tidak ditemukan oleh AI. Periksa mount folder summary.",
+      });
     if (status === 422 || status === 400)
-      return res
-        .status(422)
-        .json({
-          message:
-            "File transkrip belum bisa diperiksa. Periksa isi dan mount folder summary di AI.",
-        });
+      return res.status(422).json({
+        message:
+          "File transkrip belum bisa diperiksa. Periksa isi dan mount folder summary di AI.",
+      });
     return res.status(error.code === "ECONNABORTED" ? 504 : 502).json({
       message:
         error.code === "ECONNABORTED"

@@ -13,9 +13,14 @@ const eventTranscripts = async function (req, res) {
       req
         .pool()
         .query(
-          "SELECT et.* FROM event_transcript et left join event e on e.id = et.event_id where  et.event_id = $1 and e.datausername = $2 order by et.seq, et.start, et.id asc",
+          "SELECT et.* FROM event_transcript et left join event e on e.id = et.event_id where  et.event_id = $1 and e.datausername = $2 order by et.start, et.id asc",
           [req.query.eventId, username],
           function (err, qres) {
+            if (err)
+              return res.send({
+                success: false,
+                message: "Failed to load transcripts",
+              });
             res.send({
               success: true,
               message: "Success",
@@ -27,9 +32,14 @@ const eventTranscripts = async function (req, res) {
       req
         .pool()
         .query(
-          "SELECT et.* FROM event_transcript et left join event e on e.id = et.event_id where  et.event_id = $1 order by et.seq, et.start, et.id asc",
+          "SELECT et.* FROM event_transcript et left join event e on e.id = et.event_id where  et.event_id = $1 order by et.start, et.id asc",
           [req.query.eventId],
           function (err, qres) {
+            if (err)
+              return res.send({
+                success: false,
+                message: "Failed to load transcripts",
+              });
             res.send({
               success: true,
               message: "Success",
@@ -130,7 +140,7 @@ const deleteTranscript = async function (req, res) {
             req
               .pool()
               .query(
-                "SELECT et.* FROM event_transcript et where et.event_id = $1 order by et.seq, et.start, et.id asc",
+                "SELECT et.* FROM event_transcript et where et.event_id = $1 order by et.start, et.id asc",
                 [req.body.eventId],
                 async function (err, qres) {
                   if (!qres) {

@@ -56,7 +56,60 @@ const schema = z
     ZOOM_S2S_API_KEY: z.string().optional(),
     ZOOM_S2S_API_SECRET: z.string().optional(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((env, context) => {
+    // The HTTP API can run alone for local development, but an enabled
+    // import worker must never start without a usable STT endpoint.
+    if (env.RUNTIME_ENABLED === "false") return;
+    for (const [key, protocols] of [
+      ["STT_SERVER", ["http:", "https:"]],
+      // The legacy `websocket` client also performs Upgrade handshakes with
+      // http(s) URLs; don't reject existing office configuration on startup.
+      ["WS_STT_SERVER", ["http:", "https:", "ws:", "wss:"]],
+      ["BILLING_SERVICE_BASE_URL", ["http:", "https:"]],
+    ] as const) {
+      const value = env[key];
+      let valid = false;
+      try {
+        valid =
+          Boolean(value?.trim()) &&
+          protocols.some((protocol) => new URL(value!).protocol === protocol);
+      } catch {
+        // Invalid URL; report it with the setting name below.
+      }
+      if (!valid) {
+        context.addIssue({
+          code: "custom",
+          path: [key],
+          message: `A valid ${protocols.join(" or ")} URL is required when RUNTIME_ENABLED=true`,
+        });
+      }
+    }
+    if (!env.REDIS_SERVER?.trim()) {
+      context.addIssue({
+        code: "custom",
+        path: ["REDIS_SERVER"],
+        message: "Required when RUNTIME_ENABLED=true",
+      });
+    }
+    if (!env.BILLING_MEETHA_APP_ID?.trim()) {
+      context.addIssue({
+        code: "custom",
+        path: ["BILLING_MEETHA_APP_ID"],
+        message: "Required when RUNTIME_ENABLED=true",
+      });
+    }
+    if (
+      !Number.isFinite(Number(env.PER_MINUTE_RATE)) ||
+      Number(env.PER_MINUTE_RATE) <= 0
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["PER_MINUTE_RATE"],
+        message: "Must be a positive number when RUNTIME_ENABLED=true",
+      });
+    }
+  });
 const parsed = schema.safeParse(process.env);
 if (!parsed.success)
   throw new Error(

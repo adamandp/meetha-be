@@ -19,4 +19,7 @@ export class ImportService {
   resetImport(request: ApiRequest, response: Response) {
     return operations.resetImport(request, response);
   }
+  stopImport(request: ApiRequest, response: Response) {
+    return operations.stopImport(request, response);
+  }
 }

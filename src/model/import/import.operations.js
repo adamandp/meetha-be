@@ -1,4 +1,21 @@
 const moment = require("moment");
+const {
+  getEventAccess,
+  rejectEventAccess,
+  isAdmin,
+} = require("../../common/runtime/event-access");
+const {
+  BILLING_CLAIM_MESSAGE,
+} = require("../../common/runtime/import-constants");
+
+const rejectBillingReconciliation = (res, access) => {
+  if (access.importMessage !== BILLING_CLAIM_MESSAGE) return false;
+  res.status(409).send({
+    success: false,
+    message: "Billing reconciliation required before retrying this import",
+  });
+  return true;
+};
 
 const importFileEvent = async function (req, res) {
   let eventId = req.body.id ? req.body.id : null;
@@ -78,6 +95,39 @@ const importFileEvent = async function (req, res) {
   }
 };
 const eventsFileImportv2 = async (req, res) => {
+  if (!req.file)
+    return res
+      .status(400)
+      .send({ success: false, message: "Recording file is required" });
+  if (typeof req.body.description !== "string" || !req.body.description.trim())
+    return res
+      .status(400)
+      .send({ success: false, message: "Description is required" });
+
+  if (!isAdmin(req.user)) {
+    const userId = Number(req.user?.userId);
+    if (!Number.isSafeInteger(userId) || userId <= 0)
+      return res
+        .status(403)
+        .send({ success: false, message: "User identity is missing" });
+    const { rows } = await req
+      .pool()
+      .query('SELECT username, user_uuid FROM "user" WHERE id = $1 LIMIT 1', [
+        userId,
+      ]);
+    const owner = rows?.[0];
+    if (
+      !owner ||
+      (req.body.username && req.body.username !== owner.username) ||
+      (req.body.user_uuid && req.body.user_uuid !== owner.user_uuid)
+    )
+      return res.status(403).send({
+        success: false,
+        message: "Recording owner does not match authenticated user",
+      });
+    req.body.username = owner.username;
+    req.body.user_uuid = owner.user_uuid;
+  }
   let reqdata = {};
   let username = req.body.username ? req.body.username : "default";
   let user_uuid = req.body.user_uuid ? req.body.user_uuid : "default";
@@ -158,29 +208,46 @@ const eventsFileImportv2 = async (req, res) => {
         },
       );
   } else {
-    res.send({ success: true, message: "", data: reqdata });
+    res
+      .status(400)
+      .send({ success: false, message: "Description is required" });
   }
 };
 const restartImport = async (req, res) => {
-  req
-    .pool()
-    .query(
-      "update event set uploading = $1, loading = $2 where id = $3 ",
-      [0, 0, req.body.id],
-      function (err) {
-        if (!err) {
-          res.send({ success: true, message: "Success Update Event" });
-        } else {
-          res.send({ success: false, message: err.message });
-        }
-      },
-    );
+  const access = await getEventAccess(req, req.body?.id);
+  if (!access.ok) return rejectEventAccess(res, access);
+  if (rejectBillingReconciliation(res, access)) return;
+  if (access.uploading === 2)
+    return res
+      .status(409)
+      .send({ success: false, message: "Import already finished" });
+  try {
+    const result = await req
+      .pool()
+      .query(
+        "update event set uploading = $1, loading = $2, import_status = $3, import_message = NULL where id = $4 AND uploading <> 2 AND import_message IS DISTINCT FROM $5",
+        [0, 0, 0, access.id, BILLING_CLAIM_MESSAGE],
+      );
+    if (!result.rowCount)
+      return res.send({
+        success: false,
+        message: "Import not found or already finished",
+      });
+    req.core.cancelEventUploadWithEventId(access.id);
+    return res.send({ success: true, message: "Success Update Event" });
+  } catch (error) {
+    return res.send({ success: false, message: "Failed to restart import" });
+  }
 };
 const resetImport = async (req, res) => {
-  if (!req.query && !req.body.id) {
-    res.send({ success: false, message: "Event ID is Required" });
-  }
-  let response = await req.core.resetEventProcessor(req.body.id);
+  const access = await getEventAccess(req, req.body?.id);
+  if (!access.ok) return rejectEventAccess(res, access);
+  if (rejectBillingReconciliation(res, access)) return;
+  if (access.uploading === 2)
+    return res
+      .status(409)
+      .send({ success: false, message: "Import already finished" });
+  const response = await req.core.resetEventProcessor(access.id);
 
   if (response) {
     res.send(response);
@@ -189,10 +256,10 @@ const resetImport = async (req, res) => {
   }
 };
 const refreshImport = async (req, res) => {
-  if (!req.query && !req.body.id) {
-    res.send({ success: false, message: "Event ID is Required" });
-  }
-  let response = await req.core.refreshEventProcessor(req.body.id);
+  const access = await getEventAccess(req, req.body?.id);
+  if (!access.ok) return rejectEventAccess(res, access);
+  if (rejectBillingReconciliation(res, access)) return;
+  const response = await req.core.refreshEventProcessor(access.id);
   if (response) {
     res.send(response);
   } else {
@@ -200,24 +267,27 @@ const refreshImport = async (req, res) => {
   }
 };
 const stopImport = async (req, res) => {
-  req
-    .pool()
-    .query(
-      "update event set uploading = $1, loading = $2 where id = $3 ",
-      [3, 0, req.body.id],
-      function (err) {
-        if (!err) {
-          try {
-            req.core.cancelEventUploadWithEventId(req.body.id);
-          } catch (ex) {
-            // console.log(ex)
-          }
-          res.send({ success: true, message: "Success Update Event" });
-        } else {
-          res.send({ success: false, message: err.message });
-        }
-      },
-    );
+  const access = await getEventAccess(req, req.body?.id);
+  if (!access.ok) return rejectEventAccess(res, access);
+  if (rejectBillingReconciliation(res, access)) return;
+  if (access.uploading === 2)
+    return res
+      .status(409)
+      .send({ success: false, message: "Import already finished" });
+  try {
+    const result = await req
+      .pool()
+      .query(
+        "UPDATE event SET uploading = $1, loading = $2 WHERE id = $3 AND uploading <> 2 AND import_message IS DISTINCT FROM $4",
+        [3, 0, access.id, BILLING_CLAIM_MESSAGE],
+      );
+    if (!result.rowCount)
+      return res.send({ success: false, message: "Import not found" });
+    req.core.cancelEventUploadWithEventId(access.id);
+    return res.send({ success: true, message: "Success Update Event" });
+  } catch (error) {
+    return res.send({ success: false, message: "Failed to stop import" });
+  }
 };
 
 module.exports = {

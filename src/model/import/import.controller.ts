@@ -40,4 +40,9 @@ export class ImportController {
   resetImport(@Req() request: ApiRequest, @Res() response: Response) {
     return this.service.resetImport(request, response);
   }
+  @HttpCode(200)
+  @Post("v1/globals/stopImport")
+  stopImport(@Req() request: ApiRequest, @Res() response: Response) {
+    return this.service.stopImport(request, response);
+  }
 }

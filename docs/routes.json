@@ -192,6 +192,12 @@
     "handler": "resetImport"
   },
   {
+    "feature": "import",
+    "method": "post",
+    "path": "v1/globals/stopImport",
+    "handler": "stopImport"
+  },
+  {
     "feature": "export",
     "method": "get",
     "path": "v1/globals/exportVideoTranscripts",

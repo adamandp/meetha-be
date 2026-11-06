@@ -6,6 +6,10 @@ const config = require("../../common/config/config.js");
 const moment = require("moment");
 const fs = require("fs");
 const path = require("path");
+const {
+  getEventAccess,
+  rejectEventAccess,
+} = require("../../common/runtime/event-access");
 
 const uploadfiletobot = async function (req, res) {
   const assignApiUrl = `${config.services.llm.api}${config.services.llm.assign_endpoint}`;
@@ -81,12 +85,10 @@ const uploadfiletobot = async function (req, res) {
                     data: response.data.uuid,
                   });
                 } else {
-                  res
-                    .status(401)
-                    .send({
-                      success: false,
-                      message: "Failed to connect with chatbot",
-                    });
+                  res.status(401).send({
+                    success: false,
+                    message: "Failed to connect with chatbot",
+                  });
                 }
               })
               .catch((error) => {
@@ -123,12 +125,12 @@ const generateEventSummary = async function (req, res) {
     res.send({ success: false, message: "Event ID is Required" });
     return;
   } else {
+    const access = await getEventAccess(req, req.body.event_id);
+    if (!access.ok) return rejectEventAccess(res, access);
     let trText = "";
-    let q =
-      "SELECT * FROM event_transcript where event_id = " +
-      req.body.event_id +
-      " order by seq, start, id";
-    req.pool().query(q, function (failed, qres) {
+    const q =
+      "SELECT * FROM event_transcript WHERE event_id = $1 ORDER BY start, id";
+    req.pool().query(q, [req.body.event_id], function (failed, qres) {
       if (failed) {
         res.send({ success: false, message: failed.message });
         return;
@@ -312,12 +314,10 @@ const generateArticle = async function (req, res) {
                     .status(401)
                     .send({ success: false, message: response.data.message });
                 } else {
-                  res
-                    .status(401)
-                    .send({
-                      success: false,
-                      message: "Failed to connect with article engine",
-                    });
+                  res.status(401).send({
+                    success: false,
+                    message: "Failed to connect with article engine",
+                  });
                 }
               })
               .catch((error) => {
@@ -384,12 +384,10 @@ const getGeneratedArticle = async function (req, res) {
             .status(401)
             .send({ success: false, message: response.data.message });
         } else {
-          res
-            .status(401)
-            .send({
-              success: false,
-              message: "Failed to connect with article engine",
-            });
+          res.status(401).send({
+            success: false,
+            message: "Failed to connect with article engine",
+          });
         }
       })
       .catch((error) => {

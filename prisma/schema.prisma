@@ -1,0 +1,328 @@
+// Mirrors the checked-in existing database. Do not run db push or migrate against production.
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+}
+model asr_models {
+  version String?
+  model_path String?
+  scorer_path String?
+  text_replacement_path String?
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+}
+
+model attendance {
+  path_audio_recognize String?
+  sample_embedding Bytes?
+  nip String?
+  nama String
+  jenis_kelamin String?
+  tempat_lahir String?
+  tanggal_lahir String?
+  kewarganegaraan String?
+  agama String?
+  pekerjaan String?
+  pendidikan String?
+  jabatan String?
+  alamat String?
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  deletedby String?
+  deletedon String?
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model chunk_table {
+  id_audio Int?
+  transcript String?
+  speaker String?
+  path_audio String?
+  id Int @id @default(autoincrement())
+}
+
+model event {
+  id Int @id @default(autoincrement())
+  chatbot_uuid String?
+  agenda_id Int?
+  event_kind_id Int?
+  event_group_id Int?
+  event_type_id Int?
+  satuan_kerja_id Int?
+  case_number String?
+  event_number String?
+  ref_event_number String?
+  location String?
+  agenda String?
+  description String?
+  timestart DateTime @db.Timestamptz(6)
+  timeend DateTime? @db.Timestamptz(6)
+  status Int @default(1)
+  sync_status Int
+  import_status Int?
+  import_message String?
+  subject String?
+  loading Int
+  uploading Int
+  status_process_chunk Int
+  pembicara Int?
+  partisipan Int?
+  other_person Int?
+  total_segment Int?
+  duration_sec Float?
+  third_party_key_1 String?
+  third_party_key_2 String?
+  third_party_key_3 String?
+  long_summary String?
+  real_transcript_path String?
+  subtitle_file_path String?
+  revised_transcript_path String?
+  json_file_path String?
+  audio_folder_path String?
+  json_transcript_file_path String?
+  zip_file_path String?
+  audio_file_path String?
+  csv_file_path String?
+  import_file_path String?
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  language String
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_agenda {
+  event_type_id Int
+  name String
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_attendance {
+  event_id Int
+  event_role_id Int
+  attendance_id Int?
+  device_id Int?
+  name String
+  description String?
+  image String?
+  priority Int?
+  status Int @default(1)
+  status_type String?
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_group {
+  name String
+  description String?
+  image String?
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_kind {
+  event_type_id Int
+  name String
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_role {
+  event_group_id Int
+  ref_event_type_id Int?
+  name String
+  description String?
+  priority Int
+  status Int @default(1)
+  required Int
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_transcript {
+  event_id Int
+  attendance_id Int?
+  message_id String?
+  attendance String
+  speaker String?
+  status Int @default(1)
+  start Float?
+  stop Float?
+  duration Float?
+  title String
+  transcript String
+  highlight String?
+  similarity String?
+  word_length Int?
+  audio_path String?
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model event_type {
+  name String
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model role {
+  name String
+  description String?
+  image String?
+  priority Int
+  event_role Int
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model log_summary {
+  event_id Int?
+  long_summary String?
+  created_by String?
+  created_on String?
+  updated_by String?
+  updated_on String?
+  id Int @id @default(autoincrement())
+  datausername String?
+  data_user_uuid String?
+}
+
+model lookup {
+  id Int @id @default(autoincrement())
+  lookupkey String
+  lookupvalue String
+  lookupdesc String?
+  url String
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+}
+
+model menu {
+  id Int @id @default(autoincrement())
+  menu_category_id Int
+  parentid Int
+  name String
+  url String?
+  icon String?
+  priority Int
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+}
+
+model menu_category {
+  id Int @id @default(autoincrement())
+  name String
+  priority Int
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+}
+
+model satker {
+  id Int @id @default(autoincrement())
+  id_parent Int?
+  kode_satker String?
+  kode_provinsi String?
+  provinsi String?
+  city String?
+  lat String?
+  long String?
+  wilayah String?
+  nama_satker String
+  tipe_satker String
+  telp_satker String?
+  website_satker String?
+  alamat_satker String?
+  kategori_satker String?
+  created_at String?
+  updated_at String?
+}
+
+model text_replacement {
+  id Int @id @default(autoincrement())
+  origin String
+  replace String
+}
+
+model tr_models {
+  id Int @id @default(autoincrement())
+  text_replacement_version String
+  text_replacement_path String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+}
+
+model user {
+  id Int @id @default(autoincrement())
+  role_id BigInt
+  username String
+  user_uuid String?
+  satker_id BigInt?
+  fullname String
+  password String?
+  email String?
+  user_type Int @default(1)
+  status Int @default(1)
+  createdby String
+  createdon DateTime @db.Timestamptz(6) @default(now())
+  updatedby String
+  updatedon DateTime @db.Timestamptz(6) @default(now())
+}

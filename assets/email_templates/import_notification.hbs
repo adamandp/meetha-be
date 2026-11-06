@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Audio Transcription Notification</title>
+	<style type="text/css">
+		@media screen and (max-width: 600px) {
+			.email-container {
+				width: 100% !important;
+			}
+			.logo {
+				max-width: 100% !important;
+				height: auto !important;
+			}
+		}
+	</style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+	<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%"
+		style="max-width: 600px;" class="email-container">
+		<tr>
+			<td style="padding: 30px 30px 0 30px; background-color: #f5f5f5;">
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
+				<img src="https://stag-meetha-api.cakra.ai/static/images/meetha-logo-small.png" alt="Your Company Logo"
+					width="200" height="47" style="display: inline-block; max-width: 200px; height: auto;" class="logo">
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 30px; background-color: #ffffff; text-align: center;">
+				<img src="{{statusIconUrl}}" alt="Status Icon" width="60" height="60" style="display: inline-block;">
+				<h1 style="margin: 20px 0; font-size: 24px; line-height: 30px; color: #202124;">{{notificationTitle}}
+				</h1>
+				<p style="margin: 0 0 10px; font-size: 16px; line-height: 24px; color: #5f6368;">
+					<span style="font-weight: bold;">{{eventName}}</span>
+				</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 0 30px 30px; background-color: #ffffff;">
+				<p style="margin: 0 0 20px; font-size: 14px; line-height: 20px; color: #3c4043;text-align: center;">
+					{{description}}
+				</p>
+				{{#if showButton}}
+				<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"
+					style="margin: auto;">
+					<tr>
+						<td style="border-radius: 4px; background: {{buttonColor}};">
+							<a href="{{buttonUrl}}{{eventId}}" target="_blank"
+								style="background: {{buttonColor}}; border: 14px solid {{buttonColor}}; font-family: sans-serif; font-size: 14px; line-height: 1.1; text-align: center; text-decoration: none; display: block; border-radius: 4px; font-weight: bold; color: #ffffff;">
+								{{buttonText}}
+							</a>
+						</td>
+					</tr>
+				</table>
+				{{else}}
+				<p style="margin: 20px 0 0; font-size: 14px; line-height: 20px; color: #3c4043; text-align: center;">
+					{{statusMessage}}
+				</p>
+				{{/if}}
+			</td>
+		</tr>
+		<tr>
+			<td
+				style="padding: 30px; background-color: #ffffff; font-size: 12px; line-height: 18px; color: #5f6368; text-align: center;">
+				{{#if showAccessLink}}
+				<p style="margin: 0;">Anda juga dapat melihat detail Event anda pada <a href="{{accessLink}}{{eventId}}"
+						style="color: #1a73e8; text-decoration: none;">{{accessLink}}{{eventId}}</a></p>
+				{{/if}}
+			</td>
+		</tr>
+		<tr>
+			<td
+				style="padding: 30px; background-color: #f5f5f5; font-size: 12px; line-height: 18px; color: #5f6368; text-align: center;">
+				<p style="margin: 0;">Anda menerima email ini untuk memberi tahu Anda tentang perubahan status pada
+					event anda di aplikasi Meetha. Jangan klik link/tombol apapun pada email ini jika anda merasa tidak
+					memiliki kepentingan atau keterkaitan terhadap informasi dari Event ini.</p>
+				<p style="margin: 10px 0 0;">© 2024 Cakra AI, Jakarta, Indonesia</p>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>

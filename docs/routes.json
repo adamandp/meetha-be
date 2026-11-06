@@ -1,0 +1,400 @@
+[
+  {
+    "feature": "global",
+    "method": "get",
+    "path": "v1/globals/users",
+    "handler": "getUsers"
+  },
+  {
+    "feature": "global",
+    "method": "get",
+    "path": "v1/globals/getUsers",
+    "handler": "getUsers"
+  },
+  {
+    "feature": "recording",
+    "method": "get",
+    "path": "v1/globals/streamLocalAudio",
+    "handler": "streamLocalAudio"
+  },
+  {
+    "feature": "recording",
+    "method": "get",
+    "path": "v1/globals/downloadLocalAudio",
+    "handler": "downloadLocalAudio"
+  },
+  {
+    "feature": "event",
+    "method": "get",
+    "path": "v1/globals/events",
+    "handler": "getEvents"
+  },
+  {
+    "feature": "settings",
+    "method": "get",
+    "path": "v1/globals/settings",
+    "handler": "getSettings"
+  },
+  {
+    "feature": "event",
+    "method": "get",
+    "path": "v1/globals/detailEvents",
+    "handler": "detailEvents"
+  },
+  {
+    "feature": "event",
+    "method": "post",
+    "path": "v1/globals/updateEventStatus",
+    "handler": "updateEventStatus"
+  },
+  {
+    "feature": "event",
+    "method": "get",
+    "path": "v1/globals/updateEvent",
+    "handler": "updateEvent"
+  },
+  {
+    "feature": "settings",
+    "method": "post",
+    "path": "v1/globals/updateSettings",
+    "handler": "updateSettings"
+  },
+  {
+    "feature": "event",
+    "method": "get",
+    "path": "v1/globals/updateEventAuto",
+    "handler": "updateEventAuto"
+  },
+  {
+    "feature": "import",
+    "method": "get",
+    "path": "v1/globals/importFileEvent",
+    "handler": "importFileEvent"
+  },
+  {
+    "feature": "attendance",
+    "method": "get",
+    "path": "v1/globals/attendance/create",
+    "handler": "attendanceCreate"
+  },
+  {
+    "feature": "attendance",
+    "method": "get",
+    "path": "v1/globals/attendance/update",
+    "handler": "attendanceUpdate"
+  },
+  {
+    "feature": "event",
+    "method": "post",
+    "path": "v1/globals/event/delete",
+    "handler": "eventDelete"
+  },
+  {
+    "feature": "attendance",
+    "method": "post",
+    "path": "v1/globals/attendance/delete",
+    "handler": "attendanceDelete"
+  },
+  {
+    "feature": "transcript",
+    "method": "get",
+    "path": "v1/globals/eventTranscripts",
+    "handler": "eventTranscripts"
+  },
+  {
+    "feature": "transcript",
+    "method": "post",
+    "path": "v1/globals/editTranscript",
+    "handler": "editTranscript"
+  },
+  {
+    "feature": "attendance",
+    "method": "post",
+    "path": "v1/globals/editAttendance",
+    "handler": "editAttendance"
+  },
+  {
+    "feature": "transcript",
+    "method": "post",
+    "path": "v1/globals/editTranscriptLive",
+    "handler": "editTranscriptLive"
+  },
+  {
+    "feature": "transcript",
+    "method": "get",
+    "path": "v1/globals/updateTranscript",
+    "handler": "updateTranscript"
+  },
+  {
+    "feature": "transcript",
+    "method": "post",
+    "path": "v1/globals/deleteTranscript",
+    "handler": "deleteTranscript"
+  },
+  {
+    "feature": "transcript",
+    "method": "post",
+    "path": "v1/globals/deleteTranscriptOnly",
+    "handler": "deleteTranscriptOnly"
+  },
+  {
+    "feature": "export",
+    "method": "get",
+    "path": "v1/globals/exportEventTranscripts",
+    "handler": "exportEventTranscripts"
+  },
+  {
+    "feature": "export",
+    "method": "get",
+    "path": "v1/globals/exportTranscriptToWord",
+    "handler": "exportTranscriptToWord"
+  },
+  {
+    "feature": "chat",
+    "method": "get",
+    "path": "v1/globals/uploadfiletobot",
+    "handler": "uploadfiletobot"
+  },
+  {
+    "feature": "import",
+    "method": "post",
+    "path": "v1/globals/events/fileImportV2",
+    "handler": "eventsFileImportv2"
+  },
+  {
+    "feature": "chat",
+    "method": "post",
+    "path": "v1/globals/generateEventSummary",
+    "handler": "generateEventSummary"
+  },
+  {
+    "feature": "chat",
+    "method": "post",
+    "path": "v1/globals/directanswarequestion",
+    "handler": "directanswarequestion"
+  },
+  {
+    "feature": "import",
+    "method": "post",
+    "path": "v1/globals/restartImport",
+    "handler": "restartImport"
+  },
+  {
+    "feature": "import",
+    "method": "post",
+    "path": "v1/globals/refreshImport",
+    "handler": "refreshImport"
+  },
+  {
+    "feature": "import",
+    "method": "post",
+    "path": "v1/globals/resetImport",
+    "handler": "resetImport"
+  },
+  {
+    "feature": "export",
+    "method": "get",
+    "path": "v1/globals/exportVideoTranscripts",
+    "handler": "exportVideoTranscripts"
+  },
+  {
+    "feature": "billing",
+    "method": "get",
+    "path": "v1/globals/getUserBillingInfo",
+    "handler": "getUserBillingInfo"
+  },
+  {
+    "feature": "billing",
+    "method": "get",
+    "path": "v1/globals/getUserTopupList",
+    "handler": "getUserTopupList"
+  },
+  {
+    "feature": "billing",
+    "method": "post",
+    "path": "v1/globals/createTopup",
+    "handler": "createTopup"
+  },
+  {
+    "feature": "billing",
+    "method": "post",
+    "path": "v1/globals/cancelTopup",
+    "handler": "cancelTopup"
+  },
+  {
+    "feature": "billing",
+    "method": "post",
+    "path": "v1/globals/setExpiredTopup",
+    "handler": "setExpiredTopup"
+  },
+  {
+    "feature": "billing",
+    "method": "post",
+    "path": "v1/globals/successTopup",
+    "handler": "successTopup"
+  },
+  {
+    "feature": "billing",
+    "method": "post",
+    "path": "v1/globals/applyBilling",
+    "handler": "applyBilling"
+  },
+  {
+    "feature": "billing",
+    "method": "get",
+    "path": "v1/globals/getUserBillingLogList",
+    "handler": "getUserBillingLogList"
+  },
+  {
+    "feature": "email",
+    "method": "post",
+    "path": "v1/globals/shareMoMEmail",
+    "handler": "shareMoMEmail"
+  },
+  {
+    "feature": "chat",
+    "method": "post",
+    "path": "v1/globals/generateArticle",
+    "handler": "generateArticle"
+  },
+  {
+    "feature": "chat",
+    "method": "get",
+    "path": "v1/globals/getGeneratedArticle",
+    "handler": "getGeneratedArticle"
+  },
+  {
+    "feature": "attendance",
+    "method": "get",
+    "path": "v1/globals/attendances",
+    "handler": "attendances"
+  },
+  {
+    "feature": "speech",
+    "method": "get",
+    "path": "v1/globals/events/:eventId/inappropriate-speech",
+    "handler": "get"
+  },
+  {
+    "feature": "speech",
+    "method": "post",
+    "path": "v1/globals/events/:eventId/inappropriate-speech",
+    "handler": "check"
+  },
+  {
+    "feature": "auth",
+    "method": "post",
+    "path": "v1/auth/register",
+    "handler": "register",
+    "validation": "register",
+    "public": true
+  },
+  {
+    "feature": "auth",
+    "method": "post",
+    "path": "v1/auth/cakra_register",
+    "handler": "centralizedRegister",
+    "validation": "register",
+    "public": true
+  },
+  {
+    "feature": "auth",
+    "method": "post",
+    "path": "v1/auth/rapi_login",
+    "handler": "rapi_login",
+    "validation": "login",
+    "public": true
+  },
+  {
+    "feature": "auth",
+    "method": "post",
+    "path": "v1/auth/login",
+    "handler": "login",
+    "validation": "login",
+    "public": true
+  },
+  {
+    "feature": "auth",
+    "method": "post",
+    "path": "v1/auth/reset-password",
+    "handler": "resetPassword",
+    "validation": "resetPassword",
+    "public": true
+  },
+  {
+    "feature": "user",
+    "method": "get",
+    "path": "v1/users",
+    "handler": "getUsers",
+    "validation": "getUsers"
+  },
+  {
+    "feature": "user",
+    "method": "get",
+    "path": "v1/users/nonop",
+    "handler": "getUsers",
+    "validation": "getUsers"
+  },
+  {
+    "feature": "user",
+    "method": "post",
+    "path": "v1/users/delete",
+    "handler": "deleteUser",
+    "validation": null
+  },
+  {
+    "feature": "user",
+    "method": "get",
+    "path": "v1/users/:userId",
+    "handler": "getUser",
+    "validation": "getUser"
+  },
+  {
+    "feature": "user",
+    "method": "put",
+    "path": "v1/users/:userId",
+    "handler": "updateUser",
+    "validation": "updateUser"
+  },
+  {
+    "feature": "role",
+    "method": "get",
+    "path": "v1/roles",
+    "handler": "getRoles",
+    "validation": "getRoles"
+  },
+  {
+    "feature": "role",
+    "method": "post",
+    "path": "v1/roles",
+    "handler": "createRole",
+    "validation": "createRole"
+  },
+  {
+    "feature": "role",
+    "method": "get",
+    "path": "v1/roles/:roleId",
+    "handler": "getRole",
+    "validation": "getRole"
+  },
+  {
+    "feature": "role",
+    "method": "patch",
+    "path": "v1/roles/:roleId",
+    "handler": "updateRole",
+    "validation": "updateRole"
+  },
+  {
+    "feature": "role",
+    "method": "delete",
+    "path": "v1/roles/:roleId",
+    "handler": "deleteRole",
+    "validation": null
+  },
+  {
+    "feature": "online",
+    "method": "post",
+    "path": "v1/online/zoom/initiate",
+    "handler": "handleZoomMeeting"
+  }
+]

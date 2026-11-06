@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MoM Otomatis oleh Meetha</title>
+	<style type="text/css">
+		@media screen and (max-width: 600px) {
+			.email-container {
+				width: 100% !important;
+			}
+			.logo {
+				max-width: 100% !important;
+				height: auto !important;
+			}
+		}
+	</style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+	<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%"
+		style="max-width: 600px;" class="email-container">
+		<tr>
+			<td style="padding: 30px 30px 0 30px; background-color: #f5f5f5;">
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
+				<img src="https://stag-meetha-api.cakra.ai/static/images/meetha-logo-small.png" alt="Your Company Logo"
+					width="200" height="47" style="display: inline-block; max-width: 200px; height: auto;" class="logo">
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 30px; background-color: #ffffff; text-align: center;">
+				<img src="{{statusIconUrl}}" alt="Status Icon" width="60" height="60" style="display: inline-block;">
+				<h1 style="margin: 20px 0; font-size: 24px; line-height: 30px; color: #202124;">Halo!
+				</h1>
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 0 30px 30px; background-color: #ffffff;">
+				{{#if sendToMe}}
+				<p style="margin: 0 0 20px; font-size: 14px; line-height: 20px; color: #3c4043;text-align: center;">
+					Berikut merupakan MoM dari event {{eventName}} pada {{eventDateTime}}. Silahkan klik tombol berikut
+					untuk download file MoM.
+				</p>
+				{{else}}
+				<p style="margin: 20px 0 20px 0; font-size: 14px; line-height: 20px; color: #3c4043; text-align: center;">
+					{{senderFullname}} telah membagikan anda MoM dari event {{eventName}} pada {{eventDateTime}}.
+					Silahkan klik tombol berikut untuk download file MoM.
+				</p>
+				{{/if}}
+				<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"
+					style="margin: auto;">
+					<tr>
+						<td style="border-radius: 4px; background: {{buttonColor}};">
+							<a href="{{downloadLink}}" target="_blank"
+								style="background: {{buttonColor}}; border: 14px solid {{buttonColor}}; font-family: sans-serif; font-size: 14px; line-height: 1.1; text-align: center; text-decoration: none; display: block; border-radius: 4px; font-weight: bold; color: #ffffff;">
+								Download MoM
+							</a>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td style="padding: 30px; background-color: #ffffff; font-size: 12px; line-height: 18px; color: #5f6368;">
+				<p style="margin: 0;">Anda juga dapat download MoM melalui <a href="{{downloadLink}}"
+						style="color: #1a73e8; text-decoration: none;">{{downloadLink}}</a></p>
+			</td>
+		</tr>
+		<tr>
+			<td
+				style="padding: 30px; background-color: #f5f5f5; font-size: 12px; line-height: 18px; color: #5f6368; text-align: center;">
+				<p style="margin: 0;">Anda menerima email ini untuk karena {{senderFullname}} membagikan MoM ini kepada
+					anda. Jangan klik link/tombol apapun pada email ini jika anda merasa tidak
+					memiliki kepentingan atau keterkaitan terhadap informasi dari MoM atau Event ini</p>
+				<p style="margin: 10px 0 0;">© 2024 Cakra AI, Jakarta, Indonesia</p>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>

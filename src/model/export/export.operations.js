@@ -6,6 +6,7 @@ const moment = require("moment");
 const fs = require("fs");
 const path = require("path");
 const docx = require("docx");
+const { parseEventId, isAdmin } = require("../../common/runtime/event-access");
 const {
   Document,
   Packer,
@@ -25,6 +26,11 @@ const {
 } = docx;
 
 const exportEventTranscripts = async function (req, res) {
+  const safeEventId = parseEventId(req.query.eventId);
+  if (safeEventId === null)
+    return res
+      .status(400)
+      .send({ success: false, message: "Invalid event ID" });
   if (
     !req.query.eventId ||
     req.query.eventId == undefined ||
@@ -36,8 +42,12 @@ const exportEventTranscripts = async function (req, res) {
   } else {
     let q =
       "SELECT e.*, ea.name as agenda_name, et.name as event_type_name, ek.name as event_kind_name, eg.name as event_group_name , NULL::interval as processing_time from event e left join event_type et on et.id = e.event_type_id left join event_agenda ea on ea.id = e.agenda_id left join event_kind ek on ek.id = e.event_kind_id left join event_group eg on eg.id = e.event_group_id where 1=1";
-    q += " and e.id = " + req.query.eventId;
-    req.pool().query(q, function (err, qsres) {
+    q +=
+      " and e.id = $1" + (isAdmin(req.user) ? "" : " AND e.datausername = $2");
+    const eventParams = isAdmin(req.user)
+      ? [safeEventId]
+      : [safeEventId, req.user.username];
+    req.pool().query(q, eventParams, function (err, qsres) {
       if (qsres && qsres.rows && qsres.rows.length > 0) {
         let prevQresRows = qsres.rows[0];
         req
@@ -49,10 +59,10 @@ const exportEventTranscripts = async function (req, res) {
               if (qres && qres.rows && qres.rows.length > 0) {
                 let q =
                   "SELECT ea.name as Nama, ea.description as role, ea.status_type as Status, att.nip as NIP, att.jabatan as Jabatan, att.tempat_lahir as Tempat_Lahir, att.jenis_kelamin as Jenis_Kelamin, att.kewarganegaraan as Kewarganegaraan, att.agama as Agama, att.alamat as Alamat, att.pekerjaan as Pekerjaan, att.pendidikan as Pendidikan FROM event_attendance ea left join attendance att on att.id = ea.attendance_id where 1=1";
-                q += " and event_id = " + req.query.eventId;
+                q += " and ea.event_id = $1";
                 let wPrevQresRows = prevQresRows;
                 let qresRows = qres.rows;
-                req.pool().query(q, function (err, qres2) {
+                req.pool().query(q, [safeEventId], function (err, qres2) {
                   if (qres2 && qres2.rows && qres2.rows.length > 0) {
                     let sortedTranscripts = [];
                     let runningTranscripts = [];
@@ -152,6 +162,11 @@ const exportEventTranscripts = async function (req, res) {
   }
 };
 const exportVideoTranscripts = async function (req, res) {
+  const safeEventId = parseEventId(req.query.eventId);
+  if (safeEventId === null)
+    return res
+      .status(400)
+      .send({ success: false, message: "Invalid event ID" });
   if (
     !req.query.eventId ||
     req.query.eventId == undefined ||
@@ -163,18 +178,18 @@ const exportVideoTranscripts = async function (req, res) {
   } else {
     let q =
       "SELECT e.*, ea.name as agenda_name, et.name as event_type_name, ek.name as event_kind_name, eg.name as event_group_name , NULL::interval as processing_time from event e left join event_type et on et.id = e.event_type_id left join event_agenda ea on ea.id = e.agenda_id left join event_kind ek on ek.id = e.event_kind_id left join event_group eg on eg.id = e.event_group_id where 1=1";
-    q += " and e.id = " + req.query.eventId;
-    req.pool().query(q, function (err, qsres) {
+    q +=
+      " and e.id = $1" + (isAdmin(req.user) ? "" : " AND e.datausername = $2");
+    const eventParams = isAdmin(req.user)
+      ? [safeEventId]
+      : [safeEventId, req.user.username];
+    req.pool().query(q, eventParams, function (err, qsres) {
       if (qsres && qsres.rows && qsres.rows.length > 0) {
         let prevQresRows = qsres.rows[0];
+        const recordingFile = prevQresRows?.import_file_path;
         if (
-          (prevQresRows &&
-            prevQresRows.import_file_path &&
-            prevQresRows.import_file_path.endsWith(".mp4")) ||
-          prevQresRows.import_file_path.endsWith(".m4a") ||
-          prevQresRows.import_file_path.endsWith(".f4v") ||
-          prevQresRows.import_file_path.endsWith(".m4b") ||
-          prevQresRows.import_file_path.endsWith(".mov")
+          typeof recordingFile === "string" &&
+          /\.(mp4|m4a|f4v|m4b|mov)$/i.test(recordingFile)
         ) {
           req
             .pool()

@@ -6,6 +6,8 @@ The source is `meetha/api` plus `meetha/socket`. All active application routes f
 
 The original Vue and revamped Next.js FE code was read for contract comparison. No frontend files were edited. External services, schema and shared files are reused; no existing database migrations are run. Socket.IO event names and object-versus-JSON-string payloads are retained. The old standalone WebSocket broadcast server is integrated into the Nest application lifecycle.
 
+The legacy Vue Socket.IO client sends no authentication token on its handshake. To preserve existing browser behavior, this PR retains that connection contract and its existing broadcast events. It **does not** close the legacy Socket.IO information-disclosure risk; adding authenticated rooms requires a coordinated frontend change.
+
 Passwords continue to use bcrypt cost 10. Access/refresh token payloads, millisecond expiry fields and the Authorization renewal header retain their original format. The Nest auth guard uses the old feature auth middleware's verification/renewal behavior. The old separate Express JWT layer also required an `isAdmin` claim which local token issuance did not emit; this contradictory extra gate is not reproduced. Role-management access still requires role 1. This is an explicit correction, not byte-for-byte authentication middleware parity.
 
 Production logging uses Pino; credential fields are redacted and existing diagnostic logs are routed through a sanitizing Pino bridge. Hardcoded Zoom/ASR/database encryption credentials are environment settings, preserved only in the local ignored environment file.
@@ -28,20 +30,23 @@ These repair unusable implementation paths without introducing new business work
 
 The revamped FE calls these paths, but the provided Express source has no active route for them:
 
-| Method | Path | Source state |
-| --- | --- | --- |
-| GET | `/v1/globals/eventsCalendar` | No handler/route |
-| POST | `/v1/globals/changeattendanceintranskrip` | No handler/route |
-| POST | `/v1/globals/updatesummary` | No handler/route |
-| POST | `/v1/globals/stopImport` | Handler exists, route not registered |
+| Method | Path                                      | Source state     |
+| ------ | ----------------------------------------- | ---------------- |
+| GET    | `/v1/globals/eventsCalendar`              | No handler/route |
+| POST   | `/v1/globals/changeattendanceintranskrip` | No handler/route |
+| POST   | `/v1/globals/updatesummary`               | No handler/route |
 
-They are not silently invented during the refactor. The `stopImport` operation is retained in the import feature, matching the source's unrouted state. The original PDF export branch returns `PDF is not supported`; that limitation is preserved.
+They are not silently invented during the refactor. The original PDF export branch returns `PDF is not supported`; that limitation is preserved. `POST /v1/globals/stopImport` was present as a legacy handler but not registered as a route; this bug-fix PR exposes it without changing the existing request/response shape.
 
 ## Version decisions
 
 Nest 11.2.8 is the latest compatible stable release in the 11 line at implementation time. Nest 12 is newer, but nestjs-zod 5.5.0 declares Nest 10/11 peer support. Prisma 7.10.1 is stable; the registry's Prisma 8 latest tag was a release candidate. TypeScript 6 is selected because current typescript-eslint declares support below 6.1. The lockfile records the exact resolved dependency versions. API/docs patterns were checked through Context7, and actual versions/peer ranges through npm.
 
 ## Verification limits
+
+Import retries and completion now require the event to be accessible to the authenticated user; completed recordings cannot be reset. Before an external billing request, the worker writes `Billing reconciliation required` to `event.import_message`. If billing returns an ambiguous result or the worker crashes, this marker prevents automatic re-billing or user-triggered retry until an operator reconciles billing manually. This is conservative at-most-one-attempt behavior, **not** proof of exactly-once charging at the external billing service. The marker uses the existing column and requires no migration. Valid successful import events still produce the legacy `Finished` state and Socket.IO payloads.
+
+The existing export query's unused `processing_time` database function expression was previously replaced with `NULL::interval` because the schema fixture does not declare those functions. This field is not read by the export renderer, but its computed SQL value is not guaranteed byte-for-byte equivalent. STT real-time segment order and transcript result equivalence still require live integration validation.
 
 Automated checks cover startup, route inventory, auth/ownership checks, token renewal, billing forwarding, speech concurrency/error contracts, DOCX output, registration/login and user/role access on an isolated PostgreSQL instance, and Socket.IO notifications through an isolated Redis instance.
 

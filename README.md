@@ -20,7 +20,7 @@ The API defaults to port 3000. The existing raw WebSocket broadcast relay is inc
 
 ### Recording transcription
 
-With `RUNTIME_ENABLED=true`, startup validates `STT_SERVER` (HTTP/S), `WS_STT_SERVER` (WS/S), `REDIS_SERVER`, `BILLING_SERVICE_BASE_URL`, `BILLING_MEETHA_APP_ID` and a positive `PER_MINUTE_RATE`. The `stt:8080` values in `.env.example` are **examples**, not guaranteed reachable endpoints. Use the actual deployment endpoints. If only running HTTP locally, set `RUNTIME_ENABLED=false`: uploads may be recorded as pending, but **no transcription runs**.
+With `RUNTIME_ENABLED=true`, startup validates `STT_SERVER` (HTTP/S), `WS_STT_SERVER` (HTTP/S or WS/S, as supported by the legacy WebSocket client), `REDIS_SERVER`, `BILLING_SERVICE_BASE_URL`, `BILLING_MEETHA_APP_ID` and a positive `PER_MINUTE_RATE`. The `stt:8080` values in `.env.example` are **examples**, not guaranteed reachable endpoints. Use the actual deployment endpoints. If only running HTTP locally, set `RUNTIME_ENABLED=false`: uploads may be recorded as pending, but **no transcription runs**.
 
 The STT API receives `media_file` as a **filename** from the upload directory. STT must have a compatible shared-storage mount; a reachable HTTP endpoint alone does not prove the STT worker can open the file. Confirm the STT container sees the recorded file before running real transcription.
 

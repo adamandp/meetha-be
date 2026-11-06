@@ -63,7 +63,9 @@ const schema = z
     if (env.RUNTIME_ENABLED === "false") return;
     for (const [key, protocols] of [
       ["STT_SERVER", ["http:", "https:"]],
-      ["WS_STT_SERVER", ["ws:", "wss:"]],
+      // The legacy `websocket` client also performs Upgrade handshakes with
+      // http(s) URLs; don't reject existing office configuration on startup.
+      ["WS_STT_SERVER", ["http:", "https:", "ws:", "wss:"]],
       ["BILLING_SERVICE_BASE_URL", ["http:", "https:"]],
     ] as const) {
       const value = env[key];

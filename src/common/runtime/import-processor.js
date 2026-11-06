@@ -4,6 +4,7 @@ const moment = require("moment");
 const { client: WebSocketClient } = require("websocket");
 const axios = require("axios");
 const email = require("../email/email.js");
+const { BILLING_CLAIM_MESSAGE } = require("./import-constants.js");
 const { createAdapter } = require("@socket.io/redis-adapter");
 const { createClient } = require("redis");
 let uploadingEvents = [];
@@ -131,7 +132,8 @@ const fetchUploadableEvents = async () => {
   const version = queueVersion;
   try {
     const { rows } = await dbpool().query(
-      "SELECT * FROM event WHERE (import_file_path IS NOT NULL OR online_meeting_link IS NOT NULL) AND (uploading = 0 OR uploading = 1) AND loading < 100 ORDER BY timestart ASC",
+      "SELECT * FROM event WHERE (import_file_path IS NOT NULL OR online_meeting_link IS NOT NULL) AND (uploading = 0 OR uploading = 1) AND loading < 100 AND import_message IS DISTINCT FROM $1 ORDER BY timestart ASC",
+      [BILLING_CLAIM_MESSAGE],
     );
     // Do not re-queue stale rows from a SELECT started before completion,
     // failure, stop, or restart. The next poll reads the new DB state.
@@ -266,8 +268,8 @@ const updateImportStatusMessage = async (
     return;
   }
   // Ignore late progress after an operator has stopped or finished the event.
-  const queryText = `UPDATE event SET id = id ${query} WHERE id = $${index} AND uploading IN (0, 1)`;
-  params.push(event_id);
+  const queryText = `UPDATE event SET id = id ${query} WHERE id = $${index} AND uploading IN (0, 1) AND import_message IS DISTINCT FROM $${index + 1}`;
+  params.push(event_id, BILLING_CLAIM_MESSAGE);
   return dbpool().query(queryText, params);
 };
 const handleEventFailure = (event, error) => {
@@ -279,13 +281,20 @@ const handleEventFailure = (event, error) => {
     Object.assign(event, { import_status: 3, uploading: 3, loading: 0 });
     removeQueuedEvent(event);
     try {
-      await updateImportStatusMessage(
-        3,
-        3,
-        String(error.message).slice(0, 225),
-        event.id,
-        0,
-      );
+      if (event.billingClaimed) {
+        await dbpool().query(
+          "UPDATE event SET uploading = 3, import_status = 3, loading = 0 WHERE id = $1 AND import_message = $2",
+          [event.id, BILLING_CLAIM_MESSAGE],
+        );
+      } else {
+        await updateImportStatusMessage(
+          3,
+          3,
+          String(error.message).slice(0, 225),
+          event.id,
+          0,
+        );
+      }
     } catch (updateError) {
       logger.error(
         { err: updateError, eventId: event.id },
@@ -306,6 +315,21 @@ const handleEventFailure = (event, error) => {
 };
 const markEventAsFinished = async (event) => {
   if (event.failed || event.finished || stopping) return;
+  // Claim billing in the DB before calling the remote service. Only one
+  // worker can claim it, and a crash leaves a marker requiring reconciliation.
+  const claim = await dbpool().query(
+    "UPDATE event SET import_message = $1 WHERE id = $2 AND uploading = 1 AND import_message IS DISTINCT FROM $1",
+    [BILLING_CLAIM_MESSAGE, event.id],
+  );
+  if (claim.rowCount !== 1) {
+    // Another worker finished, stopped, or claimed this event. This instance
+    // must not later emit a competing failure notification on socket close.
+    event.finished = true;
+    removeQueuedEvent(event);
+    return;
+  }
+  event.billingClaimed = true;
+  if (event.failed || stopping) return;
   console.log(`Marking event ${event.id} as finished`);
   const billed = await applyBillingInternal({
     api_key: event.third_party_key_1,
@@ -319,8 +343,17 @@ const markEventAsFinished = async (event) => {
   });
   if (!billed.success) throw new Error(`Billing failed: ${billed.message}`);
   const { rowCount } = await dbpool().query(
-    "UPDATE event SET uploading = $1, loading = $2, total_segment = $3, status = $4, import_status = $5, import_message = $6 WHERE id = $7 AND uploading = 1",
-    [2, 100, event.total_segment, 2, 2, "Finished", event.id],
+    "UPDATE event SET uploading = $1, loading = $2, total_segment = $3, status = $4, import_status = $5, import_message = $6 WHERE id = $7 AND uploading = 1 AND import_message = $8",
+    [
+      2,
+      100,
+      event.total_segment,
+      2,
+      2,
+      "Finished",
+      event.id,
+      BILLING_CLAIM_MESSAGE,
+    ],
   );
   if (rowCount !== 1)
     throw new Error("Import status changed before completion");
@@ -358,7 +391,13 @@ const tryFinishEvent = async (event) => {
     return;
   const expected = Number(event.total_segment);
   const persisted = await getEventTranscriptsCount(event);
-  if (Number.isInteger(expected) && expected > 0 && persisted >= expected) {
+  const observed = event.observedSegments?.size ?? 0;
+  if (
+    Number.isInteger(expected) &&
+    expected > 0 &&
+    persisted >= expected &&
+    observed >= expected
+  ) {
     clearTimeout(event.completionTimer);
     event.finishing = markEventAsFinished(event)
       .catch((error) => handleEventFailure(event, error))
@@ -470,6 +509,7 @@ const handleWebSocketMessage = async (event, message) => {
         messageObj.data.results.attendance_id = attendance_id;
         messageObj.data.results.attendance_name = speakerName;
         const saved = await saveTranscript(messageObj, event);
+        trackObservedSegment(event, messageObj.data.results);
         if (saved) sendIntermediateTranscript(messageObj);
       }
       if (messageObj.data?.total_percent !== undefined) {
@@ -589,10 +629,15 @@ const resetEventProcessor = async (event_id) => {
     );
     console.log(importResponse);
     if (importResponse.response === 200) {
-      await dbpool().query(
-        "update event set uploading = $1, loading = $2, import_status = $3, import_message = NULL where id = $4",
-        [1, 0, 1, event_id],
+      const updated = await dbpool().query(
+        "update event set uploading = $1, loading = $2, import_status = $3, import_message = NULL where id = $4 AND uploading <> 2 AND import_message IS DISTINCT FROM $5",
+        [1, 0, 1, event_id, BILLING_CLAIM_MESSAGE],
       );
+      if (!updated.rowCount)
+        return {
+          success: false,
+          message: "Import already finished or not found",
+        };
       cancelEventUploadWithEventId(event_id);
       return { success: true, message: "Success Reset" };
     } else {
@@ -619,6 +664,7 @@ const synchronizeTranscripts = async (transcripts, event) => {
       messageObj.data.results.attendance_id = attendance_id;
       messageObj.data.results.attendance_name = speakerName;
       const saved = await saveTranscript(messageObj, event);
+      trackObservedSegment(event, messageObj.data.results);
       if (saved) sendIntermediateTranscript(messageObj);
     }
   }
@@ -679,6 +725,14 @@ const getEventAttendanceBySpeakerTag = async (
 const speakerNameByTagFormat = (speaker_tag) => {
   return `Speaker ${speaker_tag}`;
 };
+const trackObservedSegment = (event, result) => {
+  if (!event.observedSegments) event.observedSegments = new Set();
+  const identity =
+    result.message_id == null
+      ? `${result.start_sec}:${result.end_sec}:${result.transcript}`
+      : String(result.message_id);
+  event.observedSegments.add(identity);
+};
 const saveTranscript = async (obj, event) => {
   const results = obj.data.results;
   if (typeof results.transcript !== "string" || !results.transcript.trim())
@@ -687,13 +741,17 @@ const saveTranscript = async (obj, event) => {
   const now = moment().format("YYYY-MM-DD HH:mm:ss");
   // The existing DB schema has no `seq` column. Message IDs are used to
   // suppress resync duplicates without introducing a production migration.
-  if (results.message_id != null) {
-    const { rowCount } = await dbpool().query(
-      "SELECT 1 FROM event_transcript WHERE event_id = $1 AND message_id = $2 LIMIT 1",
-      [event.id, results.message_id],
-    );
-    if (rowCount > 0) return false;
-  }
+  const { rowCount } = await dbpool().query(
+    "SELECT 1 FROM event_transcript WHERE event_id = $1 AND (message_id = $2 OR (start IS NOT DISTINCT FROM $3 AND stop IS NOT DISTINCT FROM $4 AND transcript = $5)) LIMIT 1",
+    [
+      event.id,
+      results.message_id ?? null,
+      results.start_sec ?? null,
+      results.end_sec ?? null,
+      transcript,
+    ],
+  );
+  if (rowCount > 0) return false;
   const reqdata = {
     event_id: obj.data.meetha_id,
     attendance: results.attendance_name,

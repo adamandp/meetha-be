@@ -8,7 +8,11 @@ const require = createRequire(import.meta.url);
 
 type Query = { sql: string; params?: any[] };
 
-function setup({ failInsert = false } = {}) {
+function setup({
+  failInsert = false,
+  failBilling = false,
+  claimDenied = false,
+} = {}) {
   const queries: Query[] = [];
   const notifications: string[] = [];
   const transcripts: any[][] = [];
@@ -20,6 +24,8 @@ function setup({ failInsert = false } = {}) {
       queries.push({ sql, params });
       if (sql.startsWith("SELECT * FROM event WHERE"))
         return fetchQuery ? fetchQuery() : { rows: [] };
+      if (sql.startsWith("SELECT uploading FROM event"))
+        return { rows: [{ uploading: 1 }] };
       if (sql.includes("SELECT COUNT(*)"))
         return { rows: [{ count: transcripts.length }] };
       if (sql.includes("SELECT 1 FROM event_transcript"))
@@ -36,6 +42,8 @@ function setup({ failInsert = false } = {}) {
         transcripts.push(params!);
         return { rowCount: 1 };
       }
+      if (sql.includes("UPDATE event SET import_message = $1") && claimDenied)
+        return { rowCount: 0 };
       if (sql.includes("UPDATE event") || sql.includes("update event"))
         return { rowCount: 1 };
       return { rows: [] };
@@ -57,6 +65,8 @@ function setup({ failInsert = false } = {}) {
     async post(url: string) {
       if (url.includes("billing_log")) {
         charges++;
+        if (failBilling)
+          throw new Error("billing connection lost after request");
         return { data: { status_code: 201, data: { id: charges } } };
       }
       return { data: { response: 200 } };
@@ -91,6 +101,9 @@ function setup({ failInsert = false } = {}) {
     websocket: { client: class {} },
     axios,
     "../email/email.js": { async sendImportNotificationEmail() {} },
+    "./import-constants.js": {
+      BILLING_CLAIM_MESSAGE: "Billing reconciliation required",
+    },
     "@socket.io/redis-adapter": { createAdapter() {} },
     redis: { createClient() {} },
   };
@@ -214,7 +227,23 @@ describe("STT import persistence", () => {
     const finishedQuery = x.queries.find((query) =>
       query.sql.includes("import_status = $5"),
     )!;
-    expect(finishedQuery.params).toEqual([2, 100, 1, 2, 2, "Finished", 42]);
+    expect(finishedQuery.params).toEqual([
+      2,
+      100,
+      1,
+      2,
+      2,
+      "Finished",
+      42,
+      "Billing reconciliation required",
+    ]);
+    expect(
+      x.queries.some(
+        (q) =>
+          q.sql.includes("SET import_message = $1") &&
+          q.params?.[0] === "Billing reconciliation required",
+      ),
+    ).toBe(true);
   });
 
   it("keeps billing untouched and marks the event failed when an insert fails", async () => {
@@ -239,6 +268,43 @@ describe("STT import persistence", () => {
         .find((query) => query.sql.includes("UPDATE event SET id"))
         ?.params?.slice(0, 2),
     ).toEqual([3, 3]);
+  });
+
+  it("does not charge if the billing claim belongs to another worker", async () => {
+    const x = setup({ claimDenied: true });
+    x.event.completionReceived = true;
+    x.event.observedSegments = new Set(["seg-1"]);
+    await x.core.saveTranscript(
+      { data: { meetha_id: 42, results: { ...x.segment } } },
+      x.event,
+    );
+    await x.core.tryFinishEvent(x.event);
+    expect(x.charges).toBe(0);
+    expect(x.event.finished).toBe(true);
+    expect(x.notifications).not.toContain("event_import_finished");
+  });
+
+  it("preserves a reconciliation marker when the billing response is ambiguous", async () => {
+    const x = setup({ failBilling: true });
+    x.event.completionReceived = true;
+    x.event.observedSegments = new Set(["seg-1"]);
+    await x.core.saveTranscript(
+      { data: { meetha_id: 42, results: { ...x.segment } } },
+      x.event,
+    );
+    await x.core.tryFinishEvent(x.event);
+    expect(x.charges).toBe(1);
+    expect(x.event.failed).toBe(true);
+    expect(
+      x.queries.some((q) =>
+        q.sql.includes(
+          "SET uploading = 3, import_status = 3, loading = 0 WHERE id = $1 AND import_message = $2",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      x.queries.filter((q) => q.sql.includes("SET import_message = $1")),
+    ).toHaveLength(1);
   });
 
   it("removes stale failed jobs so an event can be queued on restart", async () => {
@@ -313,6 +379,10 @@ describe("import environment", () => {
           RUNTIME_ENABLED: runtimeEnabled,
           STT_SERVER: stt,
           WS_STT_SERVER: ws,
+          BILLING_SERVICE_BASE_URL: "http://billing.test:8181",
+          BILLING_MEETHA_APP_ID: "meetha",
+          REDIS_SERVER: "127.0.0.1:6379",
+          PER_MINUTE_RATE: "1",
         },
       },
     );
@@ -324,6 +394,11 @@ describe("import environment", () => {
   });
   it("allows isolated API development without STT when runtime is disabled", () => {
     expect(checkEnvironment("false", "", "").status).toBe(0);
+  });
+  it("accepts the original HTTP WebSocket URL from Meetha legacy", () => {
+    expect(
+      checkEnvironment("true", "http://stt:8080", "http://ws_stag:8080").status,
+    ).toBe(0);
   });
 });
 
@@ -370,15 +445,20 @@ describe("restart import", () => {
     await restartImport(
       {
         body: { id: 42 },
+        user: { roleId: 2, username: "owner" },
         core: {
           cancelEventUploadWithEventId(id: number) {
             cancelled = id;
           },
         },
         pool: () => ({
-          query(_sql: string, params: any[], callback: Function) {
+          async query(sql: string, params: any[]) {
+            if (
+              sql.startsWith("SELECT id, uploading, import_message FROM event")
+            )
+              return { rows: [{ id: 42, uploading: 3 }] };
             queryParameters = params;
-            callback(null, { rowCount: 1 });
+            return { rowCount: 1 };
           },
         }),
       },
@@ -388,7 +468,13 @@ describe("restart import", () => {
         },
       },
     );
-    expect(queryParameters).toEqual([0, 0, 0, 42]);
+    expect(queryParameters).toEqual([
+      0,
+      0,
+      0,
+      42,
+      "Billing reconciliation required",
+    ]);
     expect(cancelled).toBe(42);
     expect(response.success).toBe(true);
   });

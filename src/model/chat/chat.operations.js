@@ -6,6 +6,10 @@ const config = require("../../common/config/config.js");
 const moment = require("moment");
 const fs = require("fs");
 const path = require("path");
+const {
+  getEventAccess,
+  rejectEventAccess,
+} = require("../../common/runtime/event-access");
 
 const uploadfiletobot = async function (req, res) {
   const assignApiUrl = `${config.services.llm.api}${config.services.llm.assign_endpoint}`;
@@ -121,6 +125,8 @@ const generateEventSummary = async function (req, res) {
     res.send({ success: false, message: "Event ID is Required" });
     return;
   } else {
+    const access = await getEventAccess(req, req.body.event_id);
+    if (!access.ok) return rejectEventAccess(res, access);
     let trText = "";
     const q =
       "SELECT * FROM event_transcript WHERE event_id = $1 ORDER BY start, id";
